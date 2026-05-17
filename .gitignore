@@ -1,0 +1,19 @@
+# Local secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor junk
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

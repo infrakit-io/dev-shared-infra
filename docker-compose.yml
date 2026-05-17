@@ -1,0 +1,40 @@
+services:
+  # Traefik — reverse proxy for local dev apps.
+  # Apps attach to the `dev-shared` network and declare routing via
+  # docker labels (traefik.http.routers.<name>.rule=Host(`...`)).
+  traefik:
+    image: traefik:v3.7
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --log.level=INFO
+    ports:
+      # Dashboard (optional, dev-only): http://localhost:8090/dashboard/
+      - "8090:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dev-shared
+
+  # Cloudflare tunnel — pulls config from CF Dashboard via the token.
+  # The tunnel's wildcard ingress (e.g. `*.dev.example.com` -> http://traefik:80)
+  # is configured in the Cloudflare Zero Trust Dashboard for the tunnel that
+  # owns this token.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+    depends_on:
+      - traefik
+    networks:
+      - dev-shared
+
+networks:
+  dev-shared:
+    name: dev-shared
+    # NOT external — this compose creates the network on first `up`.
+    # Other app composes reference it as `external: true` with `name: dev-shared`.

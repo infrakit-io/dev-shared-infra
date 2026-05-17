@@ -1,0 +1,42 @@
+version: '3'
+
+silent: true
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  up:
+    desc: Start shared dev infrastructure (idempotent — creates network if missing)
+    cmds:
+      - docker network create dev-shared 2>/dev/null || true
+      - docker compose up -d
+      - 'echo "✓ Shared infra running. Traefik dashboard: http://localhost:8090"'
+      - 'echo "  Next: start an app (e.g. o-hub) with TUNNEL_HOSTNAME populated."'
+
+  down:
+    desc: Stop shared infra (network preserved for other apps)
+    cmds:
+      - docker compose down
+      - 'echo "✓ Shared infra stopped. Network `dev-shared` preserved."'
+
+  destroy:
+    desc: Full cleanup (removes network — disconnect other apps first!)
+    cmds:
+      - docker compose down
+      - docker network rm dev-shared 2>/dev/null || true
+      - 'echo "✓ Shared infra destroyed. Network removed."'
+
+  logs:
+    desc: Tail logs from all services
+    cmds:
+      - docker compose logs -f
+
+  status:
+    desc: Show compose + network status
+    cmds:
+      - docker compose ps
+      - 'echo "---"'
+      - 'docker network inspect dev-shared --format "{{`{{.Name}}: {{len .Containers}} containers connected`}}"'
