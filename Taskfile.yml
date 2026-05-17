@@ -48,4 +48,5 @@ tasks:
     desc: Show services + network status
     cmds:
       - docker compose ps
-      - docker network inspect dev-shared --format '{{`{{.Name}}: {{len .Containers}} containers connected`}}'
+      - |
+        docker network inspect dev-shared --format "{{`{{.Name}}: {{len .Containers}} containers connected`}}"
