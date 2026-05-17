@@ -2,6 +2,10 @@ version: '3'
 
 silent: true
 
+vars:
+  INFRA_CONFIG_PATH: '{{.INFRA_CONFIG_PATH | default "$HOME/work/Bibi40k-GIT/infrakit-io/i.cadolino-infra-config"}}'
+  TUNNEL_NAME: '{{.TUNNEL_NAME | default "dev-macbook"}}'
+
 tasks:
   default:
     desc: Show available tasks
@@ -9,34 +13,39 @@ tasks:
       - task --list
 
   up:
-    desc: Start shared dev infrastructure (idempotent — creates network if missing)
+    desc: Start shared dev infrastructure (fetches CF token from SOPS at runtime)
     cmds:
       - docker network create dev-shared 2>/dev/null || true
-      - docker compose up -d
+      - |
+        TOKEN_SCRIPT="{{.INFRA_CONFIG_PATH}}/scripts/dev/extract-cf-tunnel-token.sh"
+        if [ ! -x "$TOKEN_SCRIPT" ]; then
+          echo "ERROR: Token extract script not found: $TOKEN_SCRIPT" >&2
+          echo "  Override path: task up INFRA_CONFIG_PATH=/your/path" >&2
+          exit 1
+        fi
+        CF_TUNNEL_TOKEN="$($TOKEN_SCRIPT {{.TUNNEL_NAME}})" docker compose up -d
       - 'echo "✓ Shared infra running. Traefik dashboard: http://localhost:8090"'
-      - 'echo "  Next: start an app (e.g. o-hub) with TUNNEL_HOSTNAME populated."'
 
   down:
-    desc: Stop shared infra (network preserved for other apps)
+    desc: Stop shared infra (network preserved)
     cmds:
       - docker compose down
-      - 'echo "✓ Shared infra stopped. Network `dev-shared` preserved."'
+      - 'echo "✓ Stopped. Network dev-shared preserved."'
 
   destroy:
-    desc: Full cleanup (removes network — disconnect other apps first!)
+    desc: Full cleanup (removes network too)
     cmds:
       - docker compose down
       - docker network rm dev-shared 2>/dev/null || true
-      - 'echo "✓ Shared infra destroyed. Network removed."'
+      - 'echo "✓ Destroyed."'
 
   logs:
-    desc: Tail logs from all services
+    desc: Tail logs
     cmds:
       - docker compose logs -f
 
   status:
-    desc: Show compose + network status
+    desc: Show services + network status
     cmds:
       - docker compose ps
-      - 'echo "---"'
-      - 'docker network inspect dev-shared --format "{{`{{.Name}}: {{len .Containers}} containers connected`}}"'
+      - docker network inspect dev-shared --format '{{`{{.Name}}: {{len .Containers}} containers connected`}}'

@@ -48,25 +48,38 @@ Benefits over per-app `cloudflared` sidecars:
 
 ## Prerequisites
 
-- Docker (Desktop or Engine) with the `compose` plugin.
-- [`go-task`](https://taskfile.dev) (the `task` CLI).
-- A Cloudflare account with a registered domain and Zero Trust enabled.
-- A Cloudflare Tunnel with a wildcard ingress rule
-  (`*.dev.<your-domain>` -> `http://traefik:80`) and a connector token.
-  Create one via **Cloudflare Zero Trust Dashboard -> Networks -> Tunnels**.
+- Docker Desktop
+- [go-task](https://taskfile.dev/installation/)
+- A Cloudflare Tunnel created (e.g., via `kubernetes-orchestrator zerotrust-sync` from infrakit-io config)
+- SOPS age key accessible (auto-bootstrap from 1Password supported via the extract script)
+- The companion config repo cloned (default: `~/work/Bibi40k-GIT/infrakit-io/i.cadolino-infra-config`)
 
 ## Setup
 
 ```bash
-cp .env.example .env
-# Edit .env: paste your Cloudflare tunnel token into CF_TUNNEL_TOKEN
 task up
 ```
 
-Verify:
-- `task status` -> traefik + cloudflared `running`, network has containers.
-- `docker compose logs cloudflared` -> `Registered tunnel connection`.
-- Open <http://localhost:8090/dashboard/> -> Traefik dashboard.
+That's it. The task:
+1. Creates the `dev-shared` Docker network (idempotent)
+2. Fetches the CF tunnel token from SOPS at runtime (no plain-text storage)
+3. Starts Traefik + cloudflared
+
+**Custom tunnel name or config repo location:**
+
+```bash
+task up TUNNEL_NAME=my-tunnel INFRA_CONFIG_PATH=/custom/path
+```
+
+## How it works (secrets handling)
+
+The CF tunnel token is **never stored in plain text on disk**. The `up` task invokes
+`extract-cf-tunnel-token.sh` from the config repo (which decrypts SOPS at runtime),
+captures the token, and passes it directly to `docker compose` as an environment
+variable. The token exists only in the process memory of `cloudflared`.
+
+Age decryption key is auto-bootstrapped from 1Password on first run (handled by
+the extract script).
 
 ## Adding an app
 
