@@ -15,7 +15,6 @@ tasks:
   up:
     desc: Start shared dev infrastructure (fetches CF token from SOPS at runtime)
     cmds:
-      - docker network create dev-shared 2>/dev/null || true
       - |
         TOKEN_SCRIPT="{{.INFRA_CONFIG_PATH}}/scripts/dev/extract-cf-tunnel-token.sh"
         if [ ! -x "$TOKEN_SCRIPT" ]; then
