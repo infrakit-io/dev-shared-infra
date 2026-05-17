@@ -109,11 +109,26 @@ Then set `TUNNEL_HOSTNAME` in the app's `.env` to a random subdomain of the
 wildcard zone (e.g. `8f3a2c1d.dev.example.com`) and `docker compose up -d`
 the app. Traefik will pick up the new route automatically.
 
-A capability-based hostname can be generated with something like:
+## Per-app hostname generation
+
+A reusable helper script lives at `scripts/init-tunnel-hostname.sh`. It
+generates random capability-based URLs for API + SPA, writes them
+(plus a `DEV_TOKEN`) to the target app's `.env` file, and is idempotent
+with `--keep`.
+
+From a consumer app directory:
 
 ```bash
-echo "TUNNEL_HOSTNAME=$(openssl rand -hex 4).dev.example.com" >> .env
+BASE_DOMAIN=dev.example.com /path/to/dev-shared-infra/scripts/init-tunnel-hostname.sh
+# or, keep existing values if .env already contains them:
+BASE_DOMAIN=dev.example.com /path/to/dev-shared-infra/scripts/init-tunnel-hostname.sh --keep
+# or, target a custom env file:
+BASE_DOMAIN=dev.example.com /path/to/dev-shared-infra/scripts/init-tunnel-hostname.sh --env-file .env.dev
 ```
+
+`BASE_DOMAIN` must be the wildcard parent domain configured on your
+Cloudflare Tunnel (placeholder shown: `dev.example.com`). Each operator
+sets their own value — typically sourced from a shell rc file.
 
 ## Cleanup
 
@@ -139,4 +154,4 @@ MIT — see [LICENSE](./LICENSE).
 
 ## Author
 
-Maintained by [Bibi40k](https://github.com/Bibi40k) / `infrakit-io`.
+Maintained by `infrakit-io`.
