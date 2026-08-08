@@ -2,9 +2,19 @@ services:
   # Traefik — reverse proxy for local dev apps.
   # Apps attach to the `dev-shared` network and declare routing via
   # docker labels (traefik.http.routers.<name>.rule=Host(`...`)).
+  #
+  # `always`, not `unless-stopped`, on both services below: Docker Desktop
+  # gracefully stops running containers on its way down, which sets the
+  # engine's HasBeenManuallyStopped flag; on the next daemon start
+  # `unless-stopped` then refuses to restart. Observed exactly that — both
+  # containers left Exited(0)/Exited(137) after an unattended Docker Desktop
+  # restart, with nobody running `task down`, so every app behind the tunnel
+  # served Cloudflare Error 1033. `always` ignores that flag. `task down`
+  # still keeps things down: it REMOVES the containers, and a removed
+  # container has no restart policy left to honour.
   traefik:
     image: traefik:v3.7
-    restart: unless-stopped
+    restart: always
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
@@ -26,7 +36,7 @@ services:
   # owns this token.
   cloudflared:
     image: cloudflare/cloudflared:latest
-    restart: unless-stopped
+    restart: always
     command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
     depends_on:
       - traefik
